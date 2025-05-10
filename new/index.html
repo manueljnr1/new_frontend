@@ -1,0 +1,1121 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Customer Support Chatbot</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <style>
+        :root {
+            --primary-color: #4a76a8;
+            --secondary-color: #4CAF50;
+            --background-color: #f5f5f5;
+            --chat-bg: white;
+            --user-msg-bg: #dcf8c6;
+            --bot-msg-bg: #f1f0f0;
+            --border-color: #e0e0e0;
+            --text-color: #333;
+            --light-text: #666;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --header-height: 60px;
+            --footer-height: 80px;
+            --typing-dot-size: 8px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: var(--light-text);
+            font-size: 1rem;
+        }
+
+        .chat-container {
+            display: flex;
+            flex: 1;
+            min-height: 0;  /* This is important for flexbox to work properly */
+            margin-bottom: 20px;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--chat-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-right: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .api-key-container {
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .api-key-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .api-key-container input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .api-key-container button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        .api-key-container button:hover {
+            background-color: #3d8b40;
+        }
+
+        .settings-container {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .settings-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        .setting-item {
+            margin-bottom: 15px;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .setting-item select, .setting-item input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+        }
+
+        .endpoints {
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            overflow-y: auto;
+            max-height: 200px;
+        }
+
+        .endpoints-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+
+        .endpoint {
+            margin-bottom: 8px;
+            font-size: 12px;
+            background-color: #f9f9f9;
+            padding: 5px;
+            border-radius: 3px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .endpoint-method {
+            color: #e91e63;
+            font-weight: bold;
+        }
+
+        .chat-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--chat-bg);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+            height: var(--header-height);
+        }
+
+        .chat-header h2 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            margin-right: 10px;
+        }
+
+        .status-offline {
+            background-color: var(--error-color);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+
+        .user-message {
+            background-color: var(--user-msg-bg);
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-message {
+            background-color: var(--bot-msg-bg);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--light-text);
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            align-self: flex-start;
+            background-color: var(--bot-msg-bg);
+            padding: 12px 16px;
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            margin-top: 5px;
+        }
+
+        .typing-indicator span {
+            height: var(--typing-dot-size);
+            width: var(--typing-dot-size);
+            margin: 0 2px;
+            background-color: var(--light-text);
+            border-radius: 50%;
+            display: inline-block;
+            animation: typing 1.3s ease-in-out infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        @keyframes typing {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-var(--typing-dot-size)); }
+            100% { transform: translateY(0); }
+        }
+
+        .chat-footer {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-top: 1px solid var(--border-color);
+            height: var(--footer-height);
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            margin-right: 10px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .send-button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 46px;
+            height: 46px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s;
+        }
+
+        .send-button:hover {
+            background-color: #3a5f8a;
+        }
+
+        .send-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        .chat-controls {
+            display: flex;
+            padding: 10px 15px;
+            border-top: 1px solid var(--border-color);
+            gap: 10px;
+        }
+
+        .control-button {
+            flex: 1;
+            padding: 8px;
+            background-color: #f0f2f5;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .control-button svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .control-button.primary {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .control-button:hover {
+            background-color: #e4e6e9;
+        }
+
+        .control-button.primary:hover {
+            background-color: #e68900;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: transform 0.3s, opacity 0.3s;
+            transform: translateX(120%);
+            opacity: 0;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .notification.error {
+            background-color: var(--error-color);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .mobile-menu-button {
+            display: none;
+            background-color: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .chat-container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 15px;
+                display: none;
+            }
+
+            .sidebar.show {
+                display: flex;
+            }
+
+            .mobile-menu-button {
+                display: block;
+            }
+
+            .chat-header h2 {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AI Customer Support Chatbot</h1>
+            <p>Get instant answers to your questions 24/7</p>
+        </div>
+
+        <div class="chat-container">
+            <div class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    Settings
+                </div>
+                <div class="api-key-container">
+                    <label for="api-key">Tenant API Key</label>
+                    <input type="text" id="api-key" placeholder="Enter API key (sk-...)">
+                    <button id="save-key">Save API Key</button>
+                </div>
+                <div class="settings-container">
+                    <div class="settings-title">Chat Settings</div>
+                    <div class="setting-item">
+                        <label for="user-id">User Identifier</label>
+                        <input type="text" id="user-id" placeholder="Enter user ID or email" readonly>
+                    </div>
+                    <div class="setting-item">
+                        <label for="theme-selector">Theme</label>
+                        <select id="theme-selector">
+                            <option value="light">Light</option>
+                            <option value="dark">Dark</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="endpoints">
+                    <div class="endpoints-title">API Endpoints</div>
+                    <div class="endpoint">
+                        <span class="endpoint-method">POST</span> /chatbot/chat
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method">GET</span> /chatbot/history/{session_id}
+                    </div>
+                    <div class="endpoint">
+                        <span class="endpoint-method">GET</span> /health
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-main">
+                <div class="chat-header">
+                    <button class="mobile-menu-button" id="mobile-menu">☰</button>
+                    <div class="status-indicator" id="status-indicator"></div>
+                    <h2>Customer Support Chat</h2>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message bot-message">
+                        Hello! I'm your AI customer support assistant. How can I help you today?
+                        <div class="message-time">Just now</div>
+                    </div>
+                </div>
+                <div class="chat-footer">
+                    <input type="text" class="chat-input" id="chat-input" placeholder="Type a message...">
+                    <button class="send-button" id="send-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="chat-controls">
+                    <button class="control-button" id="clear-chat">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Clear Chat
+                    </button>
+                    <button class="control-button primary" id="load-history">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Load History
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Configuration - CHANGE THIS URL TO YOUR DEPLOYED API URL
+        const API_URL = 'https://multi-tenant-chatbot.onrender.com'; // Change to your deployed API URL, e.g., 'https://your-chatbot-api.onrender.com'
+        
+        // DOM Elements
+        const apiKeyInput = document.getElementById('api-key');
+        const saveKeyButton = document.getElementById('save-key');
+        const userIdInput = document.getElementById('user-id');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const clearChatButton = document.getElementById('clear-chat');
+        const loadHistoryButton = document.getElementById('load-history');
+        const notification = document.getElementById('notification');
+        const statusIndicator = document.getElementById('status-indicator');
+        const mobileMenuButton = document.getElementById('mobile-menu');
+        const sidebar = document.getElementById('sidebar');
+        const themeSelector = document.getElementById('theme-selector');
+        
+        // State
+        let apiKey = localStorage.getItem('chatbot_api_key') || '';
+        let sessionId = localStorage.getItem('chatbot_session_id') || '';
+        let userId = localStorage.getItem('chatbot_user_id') || generateUserId();
+        let isConnected = false;
+        
+        // Initialize
+        apiKeyInput.value = apiKey;
+        userIdInput.value = userId;
+        localStorage.setItem('chatbot_user_id', userId);
+        
+        // Check API connection
+        checkApiConnection();
+        
+        // Generate a random user ID
+        function generateUserId() {
+            return 'user_' + Math.random().toString(36).substring(2, 9);
+        }
+        
+        // Format timestamp
+        function formatTime(timestamp) {
+            const date = timestamp ? new Date(timestamp) : new Date();
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Show notification
+        function showNotification(message, isError = false) {
+            notification.textContent = message;
+            notification.className = isError ? 'notification error show' : 'notification show';
+            
+            setTimeout(() => {
+                notification.className = notification.className.replace('show', '');
+            }, 3000);
+        }
+        
+        // Check API connection
+        async function checkApiConnection() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                
+                if (response.ok) {
+                    isConnected = true;
+                    statusIndicator.classList.remove('status-offline');
+                } else {
+                    isConnected = false;
+                    statusIndicator.classList.add('status-offline');
+                }
+            } catch (error) {
+                isConnected = false;
+                statusIndicator.classList.add('status-offline');
+                console.error('API connection error:', error);
+            }
+        }
+        
+        // Add message to chat
+        function addMessage(text, isUser = false, timestamp = null) {
+            const message = document.createElement('div');
+            message.className = isUser ? 'message user-message' : 'message bot-message';
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = text;
+            message.appendChild(messageText);
+            
+            const timeElement = document.createElement('div');
+            timeElement.className = 'message-time';
+            timeElement.textContent = formatTime(timestamp);
+            message.appendChild(timeElement);
+            
+            chatMessages.appendChild(message);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Show typing indicator
+        function showTypingIndicator() {
+            const indicator = document.createElement('div');
+            indicator.className = 'typing-indicator';
+            indicator.id = 'typing-indicator';
+            indicator.innerHTML = '<span></span><span></span><span></span>';
+            chatMessages.appendChild(indicator);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+        
+        // Send message to chatbot
+        async function sendMessage(text) {
+            if (!apiKey) {
+                showNotification('Please enter and save an API key', true);
+                return;
+            }
+            
+            if (!isConnected) {
+                showNotification('Not connected to the API. Please check your connection', true);
+                return;
+            }
+            
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch(`${API_URL}/chatbot/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': apiKey
+                    },
+                    body: JSON.stringify({
+                        message: text,
+                        user_identifier: userId
+                    })
+                });
+                
+                hideTypingIndicator();
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.session_id) {
+                        sessionId = data.session_id;
+                        localStorage.setItem('chatbot_session_id', sessionId);
+                    }
+                    
+                    addMessage(data.response, false);
+                } else {
+                    const errorData = await response.json();
+                    addMessage(`Error: ${errorData.detail || 'Something went wrong'}`, false);
+                    console.error('API error:', errorData);
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('Error: Could not connect to the server', false);
+                console.error('Send message error:', error);
+            }
+        }
+        
+        // Load chat history
+        async function loadChatHistory() {
+            if (!apiKey || !sessionId) {
+                showNotification('No API key or session ID available', true);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_URL}/chatbot/history/${sessionId}`, {
+                    headers: {
+                        'X-API-Key': apiKey
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Clear current messages except for the welcome message
+                    chatMessages.innerHTML = '';
+                    
+                    // Add messages from history
+                    if (data.messages && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            addMessage(msg.content, msg.is_from_user, msg.created_at);
+                        });
+                        
+                        showNotification('Chat history loaded');
+                    } else {
+                        addMessage('Hello! I\'m your AI customer support assistant. How can I help you today?', false);
+                        showNotification('No chat history found');
+                    }
+                } else {
+                    showNotification('Could not load chat history', true);
+                }
+            } catch (error) {
+                showNotification('Error loading chat history', true);
+                console.error('Load history error:', error);
+            }
+        }
+        
+        // Clear chat
+        function clearChat() {
+            chatMessages.innerHTML = '';
+            addMessage('Hello! I\'m your AI customer support assistant. How can I help you today?', false);
+        }
+        
+        // Event Listeners
+        saveKeyButton.addEventListener('click', () => {
+            apiKey = apiKeyInput.value.trim();
+            if (apiKey) {
+                localStorage.setItem('chatbot_api_key', apiKey);
+                showNotification('API key saved');
+                checkApiConnection();
+            } else {
+                showNotification('Please enter a valid API key', true);
+            }
+        });
+        
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const text = chatInput.value.trim();
+                if (text) {
+                    addMessage(text, true);
+                    chatInput.value = '';
+                    sendMessage(text);
+                }
+            }
+        });
+        
+        sendButton.addEventListener('click', () => {
+            const text = chatInput.value.trim();
+            if (text) {
+                addMessage(text, true);
+                chatInput.value = '';
+                sendMessage(text);
+            }
+        });
+        
+        clearChatButton.addEventListener('click', clearChat);
+        
+        loadHistoryButton.addEventListener('click', loadChatHistory);
+        
+        mobileMenuButton.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+        
+        themeSelector.addEventListener('change', (e) => {
+            if (e.target.value === 'dark') {
+                document.documentElement.style.setProperty('--primary-color', '#2d3748');
+                document.documentElement.style.setProperty('--secondary-color', '#4c51bf');
+                document.documentElement.style.setProperty('--background-color', '#1a202c');
+                document.documentElement.style.setProperty('--chat-bg', '#2d3748');
+                document.documentElement.style.setProperty('--user-msg-bg', '#4c51bf');
+                document.documentElement.style.setProperty('--bot-msg-bg', '#4a5568');
+                document.documentElement.style.setProperty('--border-color', '#4a5568');
+                document.documentElement.style.setProperty('--text-color', '#e2e8f0');
+                document.documentElement.style.setProperty('--light-text', '#a0aec0');
+            } else {
+                document.documentElement.style.setProperty('--primary-color', '#4a76a8');
+                document.documentElement.style.setProperty('--secondary-color', '#4CAF50');
+                document.documentElement.style.setProperty('--background-color', '#f5f5f5');
+                document.documentElement.style.setProperty('--chat-bg', 'white');
+                document.documentElement.style.setProperty('--user-msg-bg', '#dcf8c6');
+                document.documentElement.style.setProperty('--bot-msg-bg', '#f1f0f0');
+                document.documentElement.style.setProperty('--border-color', '#e0e0e0');
+                document.documentElement.style.setProperty('--text-color', '#333');
+                document.documentElement.style.setProperty('--light-text', '#666');
+            }
+        });
+        
+        // Global event listener for clicks outside sidebar on mobile
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && sidebar.classList.contains('show') && 
+                !sidebar.contains(e.target) && e.target !== mobileMenuButton) {
+                sidebar.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html> -->
+
+
+<script>
+    // API endpoints
+    const API_BASE_URL = 'https://multi-tenant-chatbot.onrender.com';
+    const REGISTER_ENDPOINT = `${API_BASE_URL}/register`;
+    const LOGIN_ENDPOINT = `${API_BASE_URL}/login`;
+    const UPLOAD_KB_ENDPOINT = `${API_BASE_URL}/upload-knowledge-base`;
+    const UPLOAD_FAQS_ENDPOINT = `${API_BASE_URL}/upload-faqs`;
+    const ADD_FAQS_ENDPOINT = `${API_BASE_URL}/add-faqs`;
+    
+    // Registration steps navigation
+    function nextStep(current) {
+        document.getElementById(`step${current}`).classList.add('d-none');
+        document.getElementById(`step${current+1}`).classList.remove('d-none');
+        
+        // Update progress bar
+        const progressBar = document.getElementById('registerProgress');
+        progressBar.style.width = `${(current+1) * 33}%`;
+        progressBar.innerText = `Step ${current+1} of 3`;
+    }
+    
+    function prevStep(current) {
+        document.getElementById(`step${current}`).classList.add('d-none');
+        document.getElementById(`step${current-1}`).classList.remove('d-none');
+        
+        // Update progress bar
+        const progressBar = document.getElementById('registerProgress');
+        progressBar.style.width = `${(current-1) * 33}%`;
+        progressBar.innerText = `Step ${current-1} of 3`;
+    }
+    
+    // Add FAQ button
+    document.getElementById('addFaq').addEventListener('click', function() {
+        const container = document.getElementById('faqContainer');
+        const faqItem = document.createElement('div');
+        faqItem.className = 'faq-item mb-3';
+        faqItem.innerHTML = `
+            <div class="row">
+                <div class="col-5">
+                    <input type="text" class="form-control faq-question" placeholder="Question">
+                </div>
+                <div class="col-6">
+                    <textarea class="form-control faq-answer" placeholder="Answer" rows="2"></textarea>
+                </div>
+                <div class="col-1">
+                    <button type="button" class="btn btn-sm btn-danger remove-faq">×</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(faqItem);
+        
+        // Add event listener to the remove button
+        const removeBtn = faqItem.querySelector('.remove-faq');
+        removeBtn.addEventListener('click', function() {
+            container.removeChild(faqItem);
+        });
+    });
+    
+    // Add event listeners to initial remove button
+    document.querySelector('.remove-faq').addEventListener('click', function() {
+        // Don't remove if it's the only FAQ
+        const faqItems = document.querySelectorAll('.faq-item');
+        if (faqItems.length > 1) {
+            this.closest('.faq-item').remove();
+        }
+    });
+    
+    // Complete registration
+    async function completeRegistration() {
+        // Show loading indicator
+        const completeButton = document.querySelector('#step3 .btn-success');
+        const originalButtonText = completeButton.textContent;
+        completeButton.textContent = 'Processing...';
+        completeButton.disabled = true;
+        
+        try {
+            // Step 1: Register tenant
+            const tenantData = {
+                business_name: document.getElementById('businessName').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value,
+                industry: document.getElementById('industry').value
+            };
+            
+            const response = await fetch(REGISTER_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(tenantData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Registration failed: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            const apiKey = data.api_key;
+            const tenantId = data.tenant_id;
+            
+            // Step 2: Upload knowledge base if files were selected
+            const kbFiles = document.getElementById('knowledgeBase').files;
+            const skipKb = document.getElementById('skipKnowledgeBase').checked;
+            
+            if (kbFiles.length > 0 && !skipKb) {
+                for (let i = 0; i < kbFiles.length; i++) {
+                    const file = kbFiles[i];
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('name', file.name);
+                    
+                    await fetch(UPLOAD_KB_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'X-API-Key': apiKey
+                        },
+                        body: formData
+                    });
+                }
+            }
+            
+            // Step 3: Upload FAQs
+            const faqFile = document.getElementById('faqFile').files[0];
+            
+            if (faqFile) {
+                // Upload FAQ file
+                const formData = new FormData();
+                formData.append('file', faqFile);
+                
+                await fetch(UPLOAD_FAQS_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': apiKey
+                    },
+                    body: formData
+                });
+            } else {
+                // Add manual FAQs
+                const faqItems = document.querySelectorAll('.faq-item');
+                const faqs = [];
+                
+                faqItems.forEach(item => {
+                    const question = item.querySelector('.faq-question').value;
+                    const answer = item.querySelector('.faq-answer').value;
+                    
+                    if (question && answer) {
+                        faqs.push({ question, answer });
+                    }
+                });
+                
+                if (faqs.length > 0) {
+                    await fetch(ADD_FAQS_ENDPOINT, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-API-Key': apiKey
+                        },
+                        body: JSON.stringify(faqs)
+                    });
+                }
+            }
+            
+            // Store API key for future use
+            localStorage.setItem('chatbotApiKey', apiKey);
+            localStorage.setItem('tenantId', tenantId);
+            localStorage.setItem('businessName', tenantData.business_name);
+            
+            // Show success modal with API key
+            document.getElementById('apiKeyDisplay').textContent = apiKey;
+            
+            // Hide register modal and show success modal
+            const registerModal = bootstrap.Modal.getInstance(document.getElementById('registerModal'));
+            registerModal.hide();
+            
+            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+            successModal.show();
+            
+        } catch (error) {
+            console.error('Registration error:', error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            // Restore button state
+            completeButton.textContent = originalButtonText;
+            completeButton.disabled = false;
+        }
+    }
+    
+    // Copy API key
+    function copyApiKey() {
+        const apiKey = document.getElementById('apiKeyDisplay').textContent;
+        navigator.clipboard.writeText(apiKey)
+            .then(() => {
+                alert('API key copied to clipboard!');
+            })
+            .catch(err => {
+                console.error('Could not copy text: ', err);
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = apiKey;
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('API key copied to clipboard!');
+            });
+    }
+    
+    // Login function
+    async function login() {
+        const email = document.getElementById('loginEmail').value;
+        const password = document.getElementById('loginPassword').value;
+        const rememberMe = document.getElementById('rememberMe').checked;
+        
+        // Show loading state
+        const loginButton = document.querySelector('#loginForm .btn-primary');
+        const originalButtonText = loginButton.textContent;
+        loginButton.textContent = 'Logging in...';
+        loginButton.disabled = true;
+        
+        try {
+            const response = await fetch(LOGIN_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Invalid credentials');
+            }
+            
+            const data = await response.json();
+            
+            // Store authentication info
+            if (rememberMe) {
+                localStorage.setItem('chatbotApiKey', data.api_key);
+                localStorage.setItem('tenantId', data.tenant_id);
+                localStorage.setItem('businessName', data.business_name);
+            } else {
+                sessionStorage.setItem('chatbotApiKey', data.api_key);
+                sessionStorage.setItem('tenantId', data.tenant_id);
+                sessionStorage.setItem('businessName', data.business_name);
+            }
+            
+            // Redirect to dashboard
+            window.location.href = 'dashboard.html';
+            
+        } catch (error) {
+            console.error('Login error:', error);
+            alert(`Error: ${error.message}`);
+        } finally {
+            // Restore button state
+            loginButton.textContent = originalButtonText;
+            loginButton.disabled = false;
+        }
+    }
+    
+    // Add class names to FAQ input fields for easier collection
+    document.querySelectorAll('.faq-item').forEach(item => {
+        const questionInput = item.querySelector('input[placeholder="Question"]');
+        const answerTextarea = item.querySelector('textarea[placeholder="Answer"]');
+        
+        if (questionInput) questionInput.classList.add('faq-question');
+        if (answerTextarea) answerTextarea.classList.add('faq-answer');
+    });
+    
+    // Check for stored API key on page load for auto-login
+    document.addEventListener('DOMContentLoaded', function() {
+        const apiKey = localStorage.getItem('chatbotApiKey') || sessionStorage.getItem('chatbotApiKey');
+        
+        // If API key exists, user is already logged in
+        if (apiKey) {
+            // Optional: Redirect to dashboard automatically
+            // window.location.href = 'dashboard.html';
+            
+            // Or show a welcome back message
+            const navbarNav = document.getElementById('navbarNav');
+            const loginButtons = navbarNav.querySelector('.d-flex');
+            
+            if (loginButtons) {
+                const businessName = localStorage.getItem('businessName') || sessionStorage.getItem('businessName');
+                loginButtons.innerHTML = `
+                    <span class="text-white me-3">Welcome back, ${businessName || 'User'}</span>
+                    <a href="dashboard.html" class="btn btn-outline-light me-2">Dashboard</a>
+                    <button class="btn btn-outline-danger" onclick="logout()">Logout</button>
+                `;
+            }
+        }
+    });
+    
+    // Logout function
+    function logout() {
+        localStorage.removeItem('chatbotApiKey');
+        localStorage.removeItem('tenantId');
+        localStorage.removeItem('businessName');
+        sessionStorage.removeItem('chatbotApiKey');
+        sessionStorage.removeItem('tenantId');
+        sessionStorage.removeItem('businessName');
+        
+        // Reload page
+        window.location.reload();
+    }
+</script>

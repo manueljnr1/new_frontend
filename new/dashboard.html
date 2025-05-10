@@ -1,0 +1,600 @@
+// Add this JavaScript code at the end of your dashboard.html file before the closing </body> tag
+
+<script>
+    // API configuration
+    const API_BASE_URL = 'https://multi-tenant-chatbot.onrender.com'; // Change to your actual backend URL
+    let API_KEY = localStorage.getItem('chatbot_api_key');
+    
+    // Check if API key exists
+    if (!API_KEY) {
+        // Redirect to login if no API key found
+        // window.location.href = 'index.html';
+        
+        // For development, you can use a default key
+        API_KEY = 'sk-test-tenant-api-key';
+        localStorage.setItem('chatbot_api_key', API_KEY);
+    }
+    
+    // User info
+    let userInfo = {
+        businessName: 'Loading...',
+        email: 'Loading...'
+    };
+    
+    // Initialize dashboard data
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load user information
+        loadUserInfo();
+        
+        // Load knowledge bases
+        loadKnowledgeBases();
+        
+        // Load FAQs
+        loadFAQs();
+        
+        // Load conversations
+        loadConversations();
+        
+        // Section navigation
+        setupSectionNavigation();
+        
+        // Upload document handler
+        setupDocumentUpload();
+        
+        // FAQ management
+        setupFAQManagement();
+        
+        // Settings handlers
+        setupSettingsHandlers();
+    });
+    
+    // Load user information
+    function loadUserInfo() {
+        // In a real implementation, this would make an API call
+        // For demo, we'll use localStorage
+        const businessName = localStorage.getItem('businessName') || 'Example Company';
+        const email = localStorage.getItem('email') || 'admin@example.com';
+        
+        userInfo.businessName = businessName;
+        userInfo.email = email;
+        
+        // Update settings form if it exists
+        const businessNameInput = document.getElementById('businessName');
+        const emailInput = document.getElementById('email');
+        
+        if (businessNameInput) businessNameInput.value = businessName;
+        if (emailInput) emailInput.value = email;
+    }
+    
+    // Load knowledge bases from API
+    function loadKnowledgeBases() {
+        fetch(`${API_BASE_URL}/tenants/${API_KEY}/knowledge-bases`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load knowledge bases');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateKnowledgeBaseTable(data);
+        })
+        .catch(error => {
+            console.error('Error loading knowledge bases:', error);
+            // In a real app, show error message to user
+        });
+    }
+    
+    // Update knowledge base table with data
+    function updateKnowledgeBaseTable(knowledgeBases) {
+        const tableBody = document.querySelector('#knowledge-base table tbody');
+        if (!tableBody) return;
+        
+        // Clear existing rows
+        tableBody.innerHTML = '';
+        
+        if (knowledgeBases.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = `
+                <td colspan="5" class="text-center">No documents uploaded yet. Click 'Upload Document' to add your first document.</td>
+            `;
+            tableBody.appendChild(emptyRow);
+            return;
+        }
+        
+        // Add rows for each knowledge base
+        knowledgeBases.forEach(kb => {
+            const row = document.createElement('tr');
+            
+            // Format file size
+            let fileSize = 'Unknown';
+            if (kb.file_size) {
+                fileSize = formatFileSize(kb.file_size);
+            }
+            
+            // Format date
+            let uploadDate = 'Unknown';
+            if (kb.created_at) {
+                uploadDate = new Date(kb.created_at).toLocaleDateString();
+            }
+            
+            row.innerHTML = `
+                <td>${kb.name}</td>
+                <td>${kb.file_type.toUpperCase()}</td>
+                <td>${fileSize}</td>
+                <td>${uploadDate}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewKnowledgeBase(${kb.id})">View</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteKnowledgeBase(${kb.id})">Delete</button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Load FAQs from API
+    function loadFAQs() {
+        fetch(`${API_BASE_URL}/tenants/${API_KEY}/faqs`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load FAQs');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateFAQTable(data);
+            updateDashboardFAQs(data);
+        })
+        .catch(error => {
+            console.error('Error loading FAQs:', error);
+        });
+    }
+    
+    // Update FAQ table with data
+    function updateFAQTable(faqs) {
+        const tableBody = document.querySelector('#faqs table tbody');
+        if (!tableBody) return;
+        
+        // Clear existing rows
+        tableBody.innerHTML = '';
+        
+        if (faqs.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = `
+                <td colspan="3" class="text-center">No FAQs added yet. Click 'Add FAQ' to create your first FAQ.</td>
+            `;
+            tableBody.appendChild(emptyRow);
+            return;
+        }
+        
+        // Add rows for each FAQ
+        faqs.forEach(faq => {
+            const row = document.createElement('tr');
+            
+            row.innerHTML = `
+                <td>${faq.question}</td>
+                <td>${faq.answer}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="editFAQ(${faq.id})">Edit</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteFAQ(${faq.id})">Delete</button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Update dashboard FAQs
+    function updateDashboardFAQs(faqs) {
+        const faqContainer = document.querySelector('#overview .card-body:has(.faq-item)');
+        if (!faqContainer) return;
+        
+        // Clear existing FAQs
+        faqContainer.innerHTML = '';
+        
+        if (faqs.length === 0) {
+            faqContainer.innerHTML = `
+                <div class="text-center">
+                    <p>No FAQs added yet.</p>
+                    <a href="#" class="btn btn-sm btn-outline-primary" data-section="faqs">Add FAQs</a>
+                </div>
+            `;
+            return;
+        }
+        
+        // Add FAQs (limit to 3)
+        const displayFaqs = faqs.slice(0, 3);
+        displayFaqs.forEach(faq => {
+            const faqItem = document.createElement('div');
+            faqItem.className = 'faq-item';
+            
+            faqItem.innerHTML = `
+                <div class="faq-question">${faq.question}</div>
+                <div class="faq-answer">${faq.answer}</div>
+            `;
+            
+            faqContainer.appendChild(faqItem);
+        });
+    }
+    
+    // Load conversations from API
+    function loadConversations() {
+        fetch(`${API_BASE_URL}/tenants/${API_KEY}/conversations`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load conversations');
+            }
+            return response.json();
+        })
+        .then(data => {
+            updateConversationsTable(data);
+            updateDashboardConversations(data);
+        })
+        .catch(error => {
+            console.error('Error loading conversations:', error);
+        });
+    }
+    
+    // Update conversations table
+    function updateConversationsTable(conversations) {
+        const tableBody = document.querySelector('#conversations table tbody');
+        if (!tableBody) return;
+        
+        // Clear existing rows
+        tableBody.innerHTML = '';
+        
+        if (conversations.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = `
+                <td colspan="6" class="text-center">No conversations yet. Conversations will appear here when customers start chatting.</td>
+            `;
+            tableBody.appendChild(emptyRow);
+            return;
+        }
+        
+        // Add rows for each conversation
+        conversations.forEach(conv => {
+            const row = document.createElement('tr');
+            
+            // Format date
+            let startDate = 'Unknown';
+            if (conv.created_at) {
+                startDate = formatRelativeTime(new Date(conv.created_at));
+            }
+            
+            row.innerHTML = `
+                <td>${conv.user_identifier}</td>
+                <td>${conv.last_user_message || 'No messages'}</td>
+                <td>${conv.message_count || 0}</td>
+                <td><span class="badge ${conv.is_active ? 'bg-success' : 'bg-secondary'}">${conv.is_active ? 'Active' : 'Closed'}</span></td>
+                <td>${startDate}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewConversation('${conv.session_id}')">View</button>
+                </td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Update dashboard conversations
+    function updateDashboardConversations(conversations) {
+        const tableBody = document.querySelector('#overview .conversations-table tbody');
+        if (!tableBody) return;
+        
+        // Clear existing rows
+        tableBody.innerHTML = '';
+        
+        if (conversations.length === 0) {
+            const emptyRow = document.createElement('tr');
+            emptyRow.innerHTML = `
+                <td colspan="3" class="text-center">No conversations yet.</td>
+            `;
+            tableBody.appendChild(emptyRow);
+            return;
+        }
+        
+        // Add rows for each conversation (limit to 4)
+        const displayConversations = conversations.slice(0, 4);
+        displayConversations.forEach(conv => {
+            const row = document.createElement('tr');
+            
+            // Format date
+            let startDate = 'Unknown';
+            if (conv.created_at) {
+                startDate = formatRelativeTime(new Date(conv.created_at));
+            }
+            
+            row.innerHTML = `
+                <td><span class="status ${conv.is_active ? 'active' : 'inactive'}"></span>${conv.user_identifier}</td>
+                <td>${conv.last_user_message || 'No messages'}</td>
+                <td>${startDate}</td>
+            `;
+            
+            tableBody.appendChild(row);
+        });
+    }
+    
+    // Set up section navigation
+    function setupSectionNavigation() {
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Hide all sections
+                document.querySelectorAll('.dashboard-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Show selected section
+                const targetSection = this.getAttribute('data-section');
+                document.getElementById(targetSection).classList.add('active');
+                
+                // Update active nav link
+                document.querySelectorAll('.nav-link').forEach(navLink => {
+                    navLink.classList.remove('active');
+                });
+                this.classList.add('active');
+            });
+        });
+        
+        // Section links in cards
+        document.querySelectorAll('[data-section]').forEach(link => {
+            if (!link.classList.contains('nav-link')) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Find and click the corresponding nav link
+                    const targetSection = this.getAttribute('data-section');
+                    document.querySelector(`.nav-link[data-section="${targetSection}"]`).click();
+                });
+            }
+        });
+    }
+    
+    // Set up document upload
+    function setupDocumentUpload() {
+        const uploadButton = document.querySelector('#knowledge-base .btn-primary');
+        if (!uploadButton) return;
+        
+        uploadButton.addEventListener('click', function() {
+            // In a real app, show a file upload modal
+            // For demo, we'll use a simple file input
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf,.doc,.docx,.txt,.csv,.xlsx';
+            
+            input.onchange = function(e) {
+                if (!e.target.files.length) return;
+                
+                const file = e.target.files[0];
+                uploadDocument(file);
+            };
+            
+            input.click();
+        });
+    }
+    
+    // Upload document to API
+    function uploadDocument(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('name', file.name);
+        
+        fetch(`${API_BASE_URL}/upload-knowledge-base`, {
+            method: 'POST',
+            headers: {
+                'X-API-Key': API_KEY
+            },
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to upload document');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Reload knowledge bases
+            loadKnowledgeBases();
+            alert('Document uploaded successfully!');
+        })
+        .catch(error => {
+            console.error('Error uploading document:', error);
+            alert('Failed to upload document. Please try again.');
+        });
+    }
+    
+    // Set up FAQ management
+    function setupFAQManagement() {
+        const addFAQButton = document.querySelector('#faqs .btn-primary');
+        if (!addFAQButton) return;
+        
+        addFAQButton.addEventListener('click', function() {
+            // In a real app, show a modal for adding FAQs
+            // For demo, we'll use prompt dialogs
+            const question = prompt('Enter the question:');
+            if (!question) return;
+            
+            const answer = prompt('Enter the answer:');
+            if (!answer) return;
+            
+            addFAQ(question, answer);
+        });
+    }
+    
+    // Add FAQ to API
+    function addFAQ(question, answer) {
+        fetch(`${API_BASE_URL}/add-faqs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': API_KEY
+            },
+            body: JSON.stringify([{ question, answer }])
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to add FAQ');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Reload FAQs
+            loadFAQs();
+            alert('FAQ added successfully!');
+        })
+        .catch(error => {
+            console.error('Error adding FAQ:', error);
+            alert('Failed to add FAQ. Please try again.');
+        });
+    }
+    
+    // Edit FAQ
+    function editFAQ(faqId) {
+        // In a real app, get the FAQ from the API first
+        // For demo, we'll use the table row data
+        const row = document.querySelector(`#faqs table tbody tr td button[onclick="editFAQ(${faqId})"]`).closest('tr');
+        const question = row.cells[0].textContent;
+        const answer = row.cells[1].textContent;
+        
+        // Prompt for new values
+        const newQuestion = prompt('Edit question:', question);
+        if (!newQuestion) return;
+        
+        const newAnswer = prompt('Edit answer:', answer);
+        if (!newAnswer) return;
+        
+        // In a real app, make an API call to update the FAQ
+        alert('FAQ updated successfully!');
+        
+        // Reload FAQs
+        loadFAQs();
+    }
+    
+    // Delete FAQ
+    function deleteFAQ(faqId) {
+        if (!confirm('Are you sure you want to delete this FAQ?')) return;
+        
+        // In a real app, make an API call to delete the FAQ
+        alert('FAQ deleted successfully!');
+        
+        // Reload FAQs
+        loadFAQs();
+    }
+    
+    // View knowledge base
+    function viewKnowledgeBase(kbId) {
+        alert(`Viewing knowledge base ${kbId}. This would open the document in a viewer.`);
+    }
+    
+    // Delete knowledge base
+    function deleteKnowledgeBase(kbId) {
+        if (!confirm('Are you sure you want to delete this document?')) return;
+        
+        // In a real app, make an API call to delete the knowledge base
+        alert('Document deleted successfully!');
+        
+        // Reload knowledge bases
+        loadKnowledgeBases();
+    }
+    
+    // View conversation
+    function viewConversation(sessionId) {
+        // In a real app, navigate to a conversation detail page
+        // For demo, we'll show an alert
+        alert(`Viewing conversation ${sessionId}. This would open the conversation detail.`);
+    }
+    
+    // Set up settings handlers
+    function setupSettingsHandlers() {
+        const saveButton = document.querySelector('#settings .btn-primary');
+        if (!saveButton) return;
+        
+        saveButton.addEventListener('click', function() {
+            // Get form values
+            const businessName = document.getElementById('businessName').value;
+            const email = document.getElementById('email').value;
+            
+            // Validate
+            if (!businessName || !email) {
+                alert('Please fill in all required fields.');
+                return;
+            }
+            
+            // In a real app, make an API call to update settings
+            
+            // For demo, store in localStorage
+            localStorage.setItem('businessName', businessName);
+            localStorage.setItem('email', email);
+            
+            userInfo.businessName = businessName;
+            userInfo.email = email;
+            
+            alert('Settings saved successfully!');
+        });
+    }
+    
+    // Helper function to format file size
+    function formatFileSize(bytes) {
+        if (bytes < 1024) {
+            return bytes + ' B';
+        } else if (bytes < 1048576) {
+            return (bytes / 1024).toFixed(2) + ' KB';
+        } else {
+            return (bytes / 1048576).toFixed(2) + ' MB';
+        }
+    }
+    
+    // Helper function to format relative time
+    function formatRelativeTime(date) {
+        const now = new Date();
+        const diff = now - date;
+        
+        // Convert to seconds
+        const seconds = Math.floor(diff / 1000);
+        
+        if (seconds < 60) {
+            return 'Just now';
+        } else if (seconds < 3600) {
+            const minutes = Math.floor(seconds / 60);
+            return `${minutes} min ago`;
+        } else if (seconds < 86400) {
+            const hours = Math.floor(seconds / 3600);
+            return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+        } else if (seconds < 604800) {
+            const days = Math.floor(seconds / 86400);
+            return `${days} day${days > 1 ? 's' : ''} ago`;
+        } else {
+            return date.toLocaleDateString();
+        }
+    }
+    
+    // Sign out
+    document.querySelector('.navbar-nav .nav-link').addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Clear localStorage
+        localStorage.removeItem('chatbot_api_key');
+        localStorage.removeItem('businessName');
+        localStorage.removeItem('email');
+        
+        // Redirect to login page
+        window.location.href = 'index.html';
+    });
+</script>
